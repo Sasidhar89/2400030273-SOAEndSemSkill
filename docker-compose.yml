@@ -1,0 +1,52 @@
+services:
+  eureka-server:
+    build:
+      context: ./eureka-server
+    image: soa/eureka-server:latest
+    container_name: soa-eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - soa-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8761/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  auth-service:
+    build:
+      context: ./auth-service
+    image: soa/auth-service:latest
+    container_name: soa-auth-service
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - soa-network
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    image: soa/api-gateway:latest
+    container_name: soa-api-gateway
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SERVER_PORT: 8085
+    ports:
+      - "8085:8085"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - soa-network
+
+networks:
+  soa-network:
+    driver: bridge
